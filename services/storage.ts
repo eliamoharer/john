@@ -5,10 +5,10 @@ const CONFIG_KEY = 'ae_tracker_config';
 
 const SEED_DATA: AppData = {
   exercises: [
-    { id: 'ex_1', name: 'Bench Press', category: 'Chest' },
-    { id: 'ex_2', name: 'Squat', category: 'Legs' },
-    { id: 'ex_3', name: 'Deadlift', category: 'Back' },
-    { id: 'ex_4', name: 'Overhead Press', category: 'Shoulders' },
+    { id: 'ex_1', user: 'Adam', name: 'Bench Press', category: 'Chest' },
+    { id: 'ex_2', user: 'Adam', name: 'Squat', category: 'Legs' },
+    { id: 'ex_3', user: 'Elia', name: 'Bench Press', category: 'Chest' },
+    { id: 'ex_4', user: 'Elia', name: 'Deadlift', category: 'Back' },
   ],
   logs: []
 };
@@ -163,7 +163,6 @@ export const addSet = async (user: User, exerciseId: string, weight: number, rep
   await saveData(data);
 };
 
-// FIX: Delete Set Logic
 export const deleteSet = async (logId: string, setId: string): Promise<void> => {
   const data = await loadData();
   const logIndex = data.logs.findIndex(l => l.id === logId);

@@ -2,6 +2,7 @@ export type User = 'Adam' | 'Elia';
 
 export interface Exercise {
   id: string;
+  user: User;
   name: string;
   category?: string;
   deleted?: boolean;

@@ -44,8 +44,13 @@ const formatLocalDate = (isoDate: string) => {
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<View>(View.USER_SELECT);
+  
+  // exercises holds ALL exercises for both users
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [partnerExercise, setPartnerExercise] = useState<Exercise | null>(null);
+  
   const [isLoading, setIsLoading] = useState(false);
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -77,6 +82,7 @@ export default function App() {
     if (currentView === View.EXERCISE_DETAIL || currentView === View.COMPARE) {
       setCurrentView(View.DASHBOARD);
       setSelectedExercise(null);
+      setPartnerExercise(null);
     } else if (currentView === View.DASHBOARD) {
       setCurrentUser(null);
       setCurrentView(View.USER_SELECT);
@@ -85,9 +91,14 @@ export default function App() {
 
   const saveNewExercise = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newExerciseName.trim()) {
+    if (newExerciseName.trim() && currentUser) {
       setIsLoading(true);
-      const newEx: Exercise = { id: Date.now().toString(), name: newExerciseName.trim(), category: 'General' };
+      const newEx: Exercise = { 
+        id: Date.now().toString(), 
+        user: currentUser, // Assign to current user
+        name: newExerciseName.trim(), 
+        category: 'General' 
+      };
       await Storage.saveExercise(newEx);
       await loadExercises();
       setNewExerciseName('');
@@ -115,6 +126,14 @@ export default function App() {
     setIsSettingsOpen(false);
     loadExercises(); 
   };
+
+  const handleCompare = (partnerEx: Exercise) => {
+    setPartnerExercise(partnerEx);
+    setCurrentView(View.COMPARE);
+  };
+
+  // Filter exercises for the current user
+  const myExercises = exercises.filter(e => e.user === currentUser);
 
   if (currentView === View.USER_SELECT) {
     return (
@@ -205,7 +224,7 @@ export default function App() {
             onChange={(e) => setNewExerciseName(e.target.value)}
           />
           <button type="submit" className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800">
-            Save Exercise
+            Save to My List
           </button>
         </form>
       </Modal>
@@ -251,7 +270,7 @@ export default function App() {
             </div>
 
             <div className="grid gap-3">
-              {exercises.map(ex => (
+              {myExercises.map(ex => (
                 <div 
                   key={ex.id} 
                   onClick={() => { setSelectedExercise(ex); setCurrentView(View.EXERCISE_DETAIL); }}
@@ -278,10 +297,10 @@ export default function App() {
                 </div>
               ))}
               
-              {exercises.length === 0 && (
+              {myExercises.length === 0 && (
                 <div className="text-center py-12 text-slate-400 font-light flex flex-col items-center gap-2">
-                  <p>No exercises yet.</p>
-                  <button onClick={() => setIsAddModalOpen(true)} className="text-indigo-500 font-medium hover:underline">Create one</button>
+                  <p>No exercises found for {currentUser}.</p>
+                  <button onClick={() => setIsAddModalOpen(true)} className="text-indigo-500 font-medium hover:underline">Create your first exercise</button>
                 </div>
               )}
             </div>
@@ -292,12 +311,16 @@ export default function App() {
           <ExerciseDetailView 
             exercise={selectedExercise} 
             user={currentUser} 
-            onCompare={() => setCurrentView(View.COMPARE)}
+            allExercises={exercises}
+            onCompare={handleCompare}
           />
         )}
 
-        {currentView === View.COMPARE && selectedExercise && (
-           <ComparisonView exercise={selectedExercise} />
+        {currentView === View.COMPARE && selectedExercise && partnerExercise && (
+           <ComparisonView 
+             currentExercise={selectedExercise} 
+             partnerExercise={partnerExercise}
+           />
         )}
 
       </main>
@@ -305,13 +328,20 @@ export default function App() {
   );
 }
 
-const ExerciseDetailView = ({ exercise, user, onCompare }: { exercise: Exercise, user: User, onCompare: () => void }) => {
+const ExerciseDetailView = ({ exercise, user, allExercises, onCompare }: { exercise: Exercise, user: User, allExercises: Exercise[], onCompare: (partnerEx: Exercise) => void }) => {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const [openLogId, setOpenLogId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteSetConfirm, setDeleteSetConfirm] = useState<{logId: string, setId: string} | null>(null);
+
+  // Find if the OTHER user has this same exercise
+  const partnerExercise = allExercises.find(e => 
+    e.user !== user && 
+    e.name.trim().toLowerCase() === exercise.name.trim().toLowerCase() && 
+    !e.deleted
+  );
 
   useEffect(() => {
     refreshLogs();
@@ -381,12 +411,14 @@ const ExerciseDetailView = ({ exercise, user, onCompare }: { exercise: Exercise,
           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
             <BarChart2 size={16} className="text-indigo-500"/> PROGRESS
           </h3>
-          <button 
-            onClick={onCompare}
-            className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-semibold border border-indigo-100 flex items-center gap-1 active:bg-indigo-100"
-          >
-            <Users size={12} /> Compare
-          </button>
+          {partnerExercise && (
+            <button 
+              onClick={() => onCompare(partnerExercise)}
+              className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-semibold border border-indigo-100 flex items-center gap-1 active:bg-indigo-100"
+            >
+              <Users size={12} /> Compare
+            </button>
+          )}
         </div>
         <ProgressChart data={chartData} />
       </div>
@@ -489,15 +521,18 @@ const ExerciseDetailView = ({ exercise, user, onCompare }: { exercise: Exercise,
   );
 };
 
-const ComparisonView = ({ exercise }: { exercise: Exercise }) => {
+const ComparisonView = ({ currentExercise, partnerExercise }: { currentExercise: Exercise, partnerExercise: Exercise }) => {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
 
   useEffect(() => {
     load();
-  }, [exercise]);
+  }, [currentExercise, partnerExercise]);
 
   const load = async () => {
-    setLogs(await Storage.getAllLogsForExercise(exercise.id));
+    // Load logs for both exercise IDs
+    const myLogs = await Storage.getAllLogsForExercise(currentExercise.id);
+    const partnerLogs = await Storage.getAllLogsForExercise(partnerExercise.id);
+    setLogs([...myLogs, ...partnerLogs]);
   };
 
   const chartData = logs.flatMap(log => 
@@ -514,7 +549,7 @@ const ComparisonView = ({ exercise }: { exercise: Exercise }) => {
     <div className="space-y-6 pb-10">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 text-center">
          <h2 className="text-2xl font-bold text-slate-800 mb-2">Adam vs. Elia</h2>
-         <p className="text-slate-500 text-sm">Comparing progression for {exercise.name}</p>
+         <p className="text-slate-500 text-sm">Comparing progression for {currentExercise.name}</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-2 pt-6">
