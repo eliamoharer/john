@@ -1,0 +1,45 @@
+{
+  "exercises": [
+    {
+      "id": "ex_1",
+      "name": "Bench Press",
+      "category": "Chest"
+    },
+    {
+      "id": "ex_2",
+      "name": "Squat",
+      "category": "Legs"
+    },
+    {
+      "id": "ex_3",
+      "name": "Deadlift",
+      "category": "Back"
+    },
+    {
+      "id": "ex_4",
+      "name": "Overhead Press",
+      "category": "Shoulders"
+    },
+    {
+      "id": "1765789689722",
+      "name": "e",
+      "category": "General"
+    }
+  ],
+  "logs": [
+    {
+      "id": "1765789700510",
+      "exerciseId": "1765789689722",
+      "user": "Elia",
+      "date": "2025-12-15",
+      "sets": [
+        {
+          "id": "mj6xlgv2grwahwdkygg",
+          "weight": 2,
+          "reps": 5,
+          "timestamp": 1765789700510
+        }
+      ]
+    }
+  ]
+}
